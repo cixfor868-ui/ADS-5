@@ -1,106 +1,100 @@
-// Copyright 2025 NNTU-CS
-#include <string>
+// Copyright 2021 NNTU-CS
 #include "tstack.h"
 
-int priority(char op) {
-  if (op == '+' || op == '-') return 1;
-  if (op == '*' || op == '/') return 2;
-  return 0;
-}
-
-bool is_digit(char c) {
-  return c >= '0' && c <= '9';
-}
-
-int apply_op(int left, int right, char op) {
-  if (op == '+') return left + right;
-  if (op == '-') return left - right;
-  if (op == '*') return left * right;
-  if (op == '/') return left / right;
-  return 0;
-}
-
 std::string infx2pstfx(const std::string& inf) {
-  TStack<char, 100> st;
-  std::string result;
-  int n = static_cast<int>(inf.size());
+  TStack<char, 100> ops;
+  std::string out;
 
-  for (int i = 0; i < n; ++i) {
+  std::map<char, int> pr = {
+    {'+', 1},
+    {'-', 1},
+    {'*', 2},
+    {'/', 2}
+  };
+
+  for (size_t i = 0; i < inf.size(); ++i) {
     char c = inf[i];
 
-    if (c == ' ') {
-      continue;
-    }
-
-    if (is_digit(c)) {
-      while (i < n && is_digit(inf[i])) {
-        result += inf[i];
+    if (c >= '0' && c <= '9') {
+      out += c;
+      while (i + 1 < inf.size() && inf[i + 1] >= '0' && inf[i + 1] <= '9') {
         ++i;
+        out += inf[i];
       }
-      result += ' ';
-      --i;
+      out += ' ';
     } else if (c == '(') {
-      st.push(c);
+      ops.push(c);
     } else if (c == ')') {
-      while (!st.isempty() && st.get() != '(') {
-        result += st.get();
-        result += ' ';
-        st.pop();
+      while (!ops.isempty() && ops.get() != '(') {
+        out += ops.get();
+        out += ' ';
+        ops.pop();
       }
-      if (!st.isempty()) {
-        st.pop();
+      if (!ops.isempty()) {
+        ops.pop();
       }
-    } else {
-      while (!st.isempty() && st.get() != '(' &&
-             priority(st.get()) >= priority(c)) {
-        result += st.get();
-        result += ' ';
-        st.pop();
+    } else if (pr.count(c) != 0) {
+      while (!ops.isempty() && ops.get() != '(' && pr[ops.get()] >= pr[c]) {
+        out += ops.get();
+        out += ' ';
+        ops.pop();
       }
-      st.push(c);
+      ops.push(c);
     }
   }
 
-  while (!st.isempty()) {
-    result += st.get();
-    result += ' ';
-    st.pop();
+  while (!ops.isempty()) {
+    if (ops.get() != '(') {
+      out += ops.get();
+      out += ' ';
+    }
+    ops.pop();
   }
 
-  if (!result.empty() && result[result.size() - 1] == ' ') {
-    result.pop_back();
+  if (!out.empty()) {
+    out.pop_back();
   }
 
-  return result;
+  return out;
 }
 
-int eval(const std::string& post) {
+int eval(const std::string& pref) {
   TStack<int, 100> st;
-  int n = static_cast<int>(post.size());
 
-  for (int i = 0; i < n; ++i) {
-    char c = post[i];
+  for (size_t i = 0; i < pref.size(); ++i) {
+    char c = pref[i];
 
     if (c == ' ') {
       continue;
     }
 
-    if (is_digit(c)) {
-      int number = 0;
-      while (i < n && is_digit(post[i])) {
-        number = number * 10 + (post[i] - '0');
+    if (c >= '0' && c <= '9') {
+      int num = c - '0';
+      while (i + 1 < pref.size() && pref[i + 1] >= '0' && pref[i + 1] <= '9') {
         ++i;
+        num = num * 10 + (pref[i] - '0');
       }
-      st.push(number);
-      --i;
+      st.push(num);
     } else {
-      int right = st.get();
+      int b = st.get();
       st.pop();
-      int left = st.get();
+      int a = st.get();
       st.pop();
-      st.push(apply_op(left, right, c));
+
+      int res = 0;
+      if (c == '+') {
+        res = a + b;
+      } else if (c == '-') {
+        res = a - b;
+      } else if (c == '*') {
+        res = a * b;
+      } else if (c == '/') {
+        res = a / b;
+      }
+
+      st.push(res);
     }
   }
-  
+
   return st.get();
 }
